@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>ZonaAlerta — Bogotá 5</title>
+<title>LC Map Ver 5.1</title>
 
 <!-- Leaflet -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
@@ -89,7 +88,7 @@ header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:rgb
 .sheet-tab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;letter-spacing:.5px;}
 .sheet-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
 .sheet-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
-.tab-panel{display:none;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}.tab-panel.active{display:flex;flex-direction:column;}
+.tab-panel{display:none;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}.tab-panel.active{display:block;}
 
 /* FILTER BAR */
 .filter-bar{padding:10px 12px;display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:10;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.2);}
@@ -277,7 +276,7 @@ header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:rgb
 
 <!-- HEADER -->
 <header>
-  <div class="logo"><div class="logo-icon">🔺</div>LCMap<span>Ver 5</span></div>
+  <div class="logo"><div class="logo-icon">🔺</div>LCMap<span>ver 5.1</span></div>
   <div class="header-right">
     <div class="fb-dot" id="fb-dot" title="Conexión Firebase"></div>
     <div class="hstat">
