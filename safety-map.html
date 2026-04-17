@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ZonaAlerta — Bogotá</title>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<!-- Firebase (CDN compat — no bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#0a0c10;--surface:#111318;--surface2:#1a1d24;--surface3:#22262f;
+  --border:#252830;--text:#e8eaf0;--muted:#6b7280;
+  --accent:#ff4757;--accent2:#ffa502;--accent3:#2ed573;
+  --danger:#ff2d55;--warning:#ff9f0a;--safe:#30d158;--blue:#0a84ff;
+  --nav-h:64px;--header-h:56px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100%;width:100%;overflow:hidden;overscroll-behavior:none;}
+
+/* HEADER */
+header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:rgba(17,19,24,.95);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--border);z-index:1001;display:flex;align-items:center;justify-content:space-between;padding:0 16px;}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;letter-spacing:-.5px;display:flex;align-items:center;gap:8px;}
+.logo-icon{width:30px;height:30px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.logo span{color:var(--accent);}
+.header-right{display:flex;align-items:center;gap:12px;}
+.hstat{text-align:center;line-height:1;}
+.hstat-val{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;}
+.hstat-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+.btn-report-hdr{background:var(--accent);color:#fff;border:none;padding:7px 14px;border-radius:20px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;}
+.btn-report-hdr:active{background:#e03040;}
+
+/* Firebase status dot */
+.fb-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s;}
+.fb-dot.live{background:var(--accent3);box-shadow:0 0 6px var(--accent3);}
+.fb-dot.error{background:var(--danger);}
+
+/* MAP */
+#map{position:fixed;top:var(--header-h);left:0;right:0;bottom:0;z-index:1;}
+@media(max-width:767px){#map{bottom:var(--nav-h);}}
+
+/* Leaflet dark */
+.leaflet-tile-pane{filter:brightness(.55) saturate(.7) hue-rotate(190deg);}
+.leaflet-control-zoom{border:1px solid var(--border)!important;border-radius:8px!important;overflow:hidden;}
+.leaflet-control-zoom a{background:var(--surface)!important;color:var(--text)!important;border-bottom:1px solid var(--border)!important;}
+.leaflet-control-zoom a:hover{background:var(--surface2)!important;}
+@media(max-width:767px){.leaflet-bottom.leaflet-right{bottom:calc(var(--nav-h)+8px)!important;}}
+.leaflet-control-attribution{background:rgba(17,19,24,.7)!important;color:var(--muted)!important;font-size:9px!important;}
+.leaflet-control-attribution a{color:var(--muted)!important;}
+.leaflet-popup-content-wrapper{background:var(--surface)!important;color:var(--text)!important;border:1px solid var(--border)!important;border-radius:12px!important;box-shadow:0 8px 32px rgba(0,0,0,.5)!important;padding:0!important;}
+.leaflet-popup-content{margin:0!important;width:auto!important;}
+.leaflet-popup-tip{background:var(--surface)!important;}
+.leaflet-popup-close-button{color:var(--muted)!important;font-size:18px!important;padding:6px 8px!important;}
+
+/* GPS BUTTON */
+.gps-btn{position:fixed;right:14px;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;box-shadow:0 2px 12px rgba(0,0,0,.4);}
+#gps-btn{bottom:calc(var(--nav-h)+60px);}
+@media(min-width:768px){#gps-btn{bottom:14px;}}
+#gps-btn:active{background:var(--surface2);}
+#gps-btn.locating{animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* LEGEND */
+.legend{position:fixed;left:14px;z-index:500;background:rgba(17,19,24,.88);border:1px solid var(--border);border-radius:10px;padding:8px 10px;backdrop-filter:blur(10px);}
+#legend{bottom:calc(var(--nav-h)+14px);}
+@media(min-width:768px){#legend{bottom:14px;}}
+.legend-title{font-family:'Syne',sans-serif;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:#9ca3af;margin-bottom:3px;}
+.legend-item:last-child{margin-bottom:0;}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+
+/* BOTTOM SHEET */
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:599;opacity:0;pointer-events:none;transition:opacity .3s;}
+.sheet-overlay.visible{opacity:1;pointer-events:all;}
+.bottom-sheet{position:fixed;left:0;right:0;bottom:0;z-index:600;background:var(--surface);border-radius:18px 18px 0 0;border-top:1px solid var(--border);will-change:transform;max-height:92vh;display:flex;flex-direction:column;}
+.sheet-handle-wrap{padding:10px 0 4px;display:flex;justify-content:center;flex-shrink:0;cursor:grab;}
+.sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;}
+.sheet-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;padding:0 4px;}
+.sheet-tab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;letter-spacing:.5px;}
+.sheet-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.sheet-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
+.tab-panel{display:none;}.tab-panel.active{display:block;}
+
+/* FILTER BAR */
+.filter-bar{padding:10px 12px;display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-bottom:1px solid var(--border);}
+.filter-bar::-webkit-scrollbar{display:none;}
+.filter-chip{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid var(--border);cursor:pointer;color:var(--muted);background:transparent;white-space:nowrap;flex-shrink:0;}
+.filter-chip.active{border-color:var(--accent);color:var(--accent);background:rgba(255,71,87,.1);}
+.filter-chip.td.active{border-color:var(--danger);color:var(--danger);background:rgba(255,45,85,.1);}
+.filter-chip.tw.active{border-color:var(--warning);color:var(--warning);background:rgba(255,159,10,.1);}
+
+/* CARDS */
+.report-list{padding:10px 12px;display:flex;flex-direction:column;gap:8px;}
+.report-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 12px 12px 15px;cursor:pointer;position:relative;overflow:hidden;}
+.report-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;}
+.report-card.danger::before{background:var(--danger);}
+.report-card.warning::before{background:var(--warning);}
+.report-card.info::before{background:var(--blue);}
+.report-card:active{background:var(--surface3);}
+.card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+.card-type-row{display:flex;align-items:center;gap:6px;}
+.card-type-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
+.card-time{font-size:10px;color:var(--muted);}
+.card-desc{font-size:12px;color:#9ca3af;margin-bottom:8px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.card-bottom{display:flex;align-items:center;justify-content:space-between;}
+.card-location{font-size:11px;color:var(--muted);}
+.danger-stars{display:flex;align-items:center;gap:1px;}
+.star{font-size:11px;color:#333;}.star.filled{color:var(--accent2);}
+.card-votes{font-size:10px;color:var(--muted);margin-left:3px;}
+
+/* ZONE LIST */
+.zone-list{padding:10px 12px;display:flex;flex-direction:column;gap:8px;}
+.zone-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;cursor:pointer;}
+.zone-card:active{background:var(--surface3);}
+.zone-name-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.zone-name{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;}
+.zone-risk{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;}
+.risk-high{background:rgba(255,45,85,.2);color:var(--danger);}
+.risk-med{background:rgba(255,159,10,.2);color:var(--warning);}
+.risk-low{background:rgba(48,209,88,.2);color:var(--safe);}
+.zone-stats-row{display:flex;gap:14px;margin-bottom:8px;}
+.zone-mini-stat{font-size:11px;color:var(--muted);}
+.zone-mini-stat strong{color:var(--text);}
+.mini-bar{height:4px;background:var(--surface);border-radius:2px;overflow:hidden;}
+.mini-bar-fill{height:100%;border-radius:2px;}
+
+/* EMPTY */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;color:var(--muted);text-align:center;gap:10px;}
+.empty-icon{font-size:36px;opacity:.4;}
+.empty-text{font-size:13px;line-height:1.5;}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:rgba(17,19,24,.96);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);z-index:700;display:flex;align-items:center;justify-content:space-around;padding:0 8px;padding-bottom:env(safe-area-inset-bottom,0px);}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;cursor:pointer;color:var(--muted);border-radius:10px;}
+.nav-btn.active{color:var(--accent);}
+.nav-btn:active{background:rgba(255,71,87,.08);}
+.nav-icon{font-size:22px;line-height:1;}
+.nav-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;}
+.nav-report-btn{flex:1.3;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;}
+.nav-report-inner{background:var(--accent);width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 20px rgba(255,71,87,.4);margin-top:-16px;transition:transform .15s;}
+.nav-report-btn:active .nav-report-inner{transform:scale(.93);}
+.nav-report-label{font-size:10px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.4px;}
+
+/* MODALS */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:1200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px calc(20px + env(safe-area-inset-bottom,0px));transform:translateY(30px);transition:transform .25s cubic-bezier(.32,.72,0,1);}
+.modal-overlay.open .modal{transform:translateY(0);}
+@media(min-width:600px){.modal-overlay{align-items:center;}.modal{border-radius:18px;padding:24px;}}
+.modal-drag{padding:10px 0 6px;display:flex;justify-content:center;}
+.modal-drag-bar{width:36px;height:4px;background:var(--border);border-radius:2px;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.modal-title{font-family:'Syne',sans-serif;font-weight:700;font-size:17px;}
+.modal-close{width:30px;height:30px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;color:var(--muted);font-size:15px;display:flex;align-items:center;justify-content:center;}
+.modal-close:active{background:var(--surface3);}
+.form-group{margin-bottom:16px;}
+.form-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;}
+.form-input,.form-textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;-webkit-appearance:none;}
+.form-input:focus,.form-textarea:focus{border-color:var(--accent);}
+.form-textarea{resize:none;min-height:76px;}
+
+/* GPS badge */
+.location-badge{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--muted);}
+.location-badge.got{border-color:rgba(46,213,115,.3);color:var(--accent3);}
+.location-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.location-badge.got .location-dot{background:var(--accent3);box-shadow:0 0 6px var(--accent3);}
+
+/* TYPE SELECTOR */
+.type-selector{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.type-option{border:1px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center;cursor:pointer;font-size:11px;font-weight:600;color:var(--muted);}
+.type-emoji-large{font-size:22px;display:block;margin-bottom:4px;}
+.type-option:active{background:var(--surface3);}
+.type-option.selected{border-color:var(--accent);background:rgba(255,71,87,.1);color:var(--accent);}
+
+/* DANGER STARS */
+.danger-selector{display:flex;align-items:center;gap:4px;}
+.danger-star-input{font-size:28px;cursor:pointer;color:#2a2a2a;line-height:1;padding:2px;}
+.danger-star-input.hover,.danger-star-input.selected{color:var(--accent2);}
+.danger-level-label{font-size:11px;color:var(--muted);margin-left:6px;}
+.btn-submit{width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:12px;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;cursor:pointer;margin-top:4px;}
+.btn-submit:active{background:#e03040;}
+.btn-submit:disabled{background:#333;cursor:not-allowed;color:#666;}
+
+/* INCIDENT DETAIL */
+.incident-header-row{display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+.incident-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+.incident-title{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;}
+.incident-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+.vote-section{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin:14px 0;}
+.vote-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:12px;}
+.vote-stars{display:flex;gap:6px;margin-bottom:6px;}
+.vote-star{font-size:30px;cursor:pointer;color:#252525;}
+.vote-star.hover,.vote-star.selected{color:var(--accent2);}
+.vote-desc{font-size:12px;color:var(--muted);min-height:16px;}
+.vote-actions{display:flex;gap:8px;margin-top:12px;}
+.btn-confirm{flex:1;padding:10px;background:rgba(255,45,85,.12);color:var(--danger);border:1px solid rgba(255,45,85,.3);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;}
+.btn-confirm:active{background:rgba(255,45,85,.22);}
+.btn-false{flex:1;padding:10px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;}
+.btn-false:active{background:var(--surface3);}
+.cred-wrap{margin-top:12px;}
+.cred-label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px;}
+.cred-bar{height:6px;background:var(--surface);border-radius:3px;overflow:hidden;}
+.cred-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--danger),var(--warning));transition:width .5s;}
+.coords-link{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--blue);text-decoration:none;margin-top:8px;}
+.coords-link:hover{text-decoration:underline;}
+
+/* TOAST */
+.toast{position:fixed;top:calc(var(--header-h)+8px);left:50%;transform:translateX(-50%) translateY(-20px);background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:10px 18px;font-size:13px;z-index:2000;display:flex;align-items:center;gap:7px;opacity:0;transition:all .3s;white-space:nowrap;box-shadow:0 4px 24px rgba(0,0,0,.4);pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* CUSTOM MARKER */
+.custom-marker{display:flex;align-items:center;justify-content:center;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid rgba(255,255,255,.3);}
+.custom-marker-inner{transform:rotate(45deg);font-size:14px;line-height:1;}
+
+/* POPUP */
+.popup-inner{padding:14px;min-width:200px;max-width:260px;}
+.popup-type{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:flex;align-items:center;gap:5px;}
+.popup-desc{font-size:12px;color:#9ca3af;line-height:1.4;margin-bottom:8px;}
+.popup-meta{font-size:10px;color:var(--muted);}
+.popup-stars{display:flex;gap:1px;margin-top:4px;}
+.popup-star{font-size:12px;color:#333;}.popup-star.f{color:var(--accent2);}
+.popup-btn{display:block;width:100%;margin-top:10px;padding:7px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;text-align:center;}
+.popup-btn:active{background:#e03040;}
+
+/* DESKTOP */
+@media(min-width:768px){
+  .bottom-nav,.bottom-sheet,.sheet-overlay{display:none!important;}
+  .desktop-sidebar{display:flex!important;}
+  #map{left:300px;}
+  .btn-report-hdr{display:flex!important;}
+}
+@media(max-width:767px){
+  .desktop-sidebar{display:none!important;}
+  .btn-report-hdr{display:none!important;}
+}
+.desktop-sidebar{display:none;position:fixed;top:var(--header-h);left:0;width:300px;bottom:0;z-index:100;background:var(--surface);border-right:1px solid var(--border);flex-direction:column;overflow:hidden;}
+.sidebar-tabs-row{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+.sidebar-tab{flex:1;padding:11px;text-align:center;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;letter-spacing:.5px;}
+.sidebar-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.sidebar-body{flex:1;overflow-y:auto;}
+.sidebar-panel{display:none;}.sidebar-panel.active{display:block;}
+.sidebar-filter-bar{padding:10px;display:flex;gap:5px;flex-wrap:wrap;border-bottom:1px solid var(--border);}
+::-webkit-scrollbar{width:0;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo"><div class="logo-icon">🔺</div>Zona<span>Alerta</span></div>
+  <div class="header-right">
+    <div class="fb-dot" id="fb-dot" title="Conexión Firebase"></div>
+    <div class="hstat">
+      <div class="hstat-val" id="total-reports" style="color:var(--accent)">—</div>
+      <div class="hstat-lbl">Reportes</div>
+    </div>
+    <button class="btn-report-hdr" onclick="openReportModal()">⚠️ Reportar</button>
+  </div>
+</header>
+
+<!-- DESKTOP SIDEBAR -->
+<div class="desktop-sidebar">
+  <div class="sidebar-tabs-row">
+    <div class="sidebar-tab active" onclick="switchDskTab('incidents')">Incidentes</div>
+    <div class="sidebar-tab" onclick="switchDskTab('zones')">Zonas</div>
+  </div>
+  <div class="sidebar-body">
+    <div class="sidebar-panel active" id="dsk-incidents">
+      <div class="sidebar-filter-bar">
+        <div class="filter-chip active" onclick="filterReports(this,'all')">Todos</div>
+        <div class="filter-chip td" onclick="filterReports(this,'Robo')">🔪 Robo</div>
+        <div class="filter-chip td" onclick="filterReports(this,'Persona peligrosa')">👤 Peligroso</div>
+        <div class="filter-chip tw" onclick="filterReports(this,'Sospechoso')">👁 Sospechoso</div>
+        <div class="filter-chip" onclick="filterReports(this,'Vandalismo')">🔧 Vandalismo</div>
+      </div>
+      <div class="report-list" id="dsk-report-list"></div>
+    </div>
+    <div class="sidebar-panel" id="dsk-zones">
+      <div class="zone-list" id="dsk-zone-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAP -->
+<div id="map"></div>
+
+<!-- GPS BUTTON -->
+<div class="gps-btn" id="gps-btn" onclick="locateUser(false)" title="Mi ubicación">📍</div>
+
+<!-- LEGEND -->
+<div class="legend" id="legend">
+  <div class="legend-title">Tipo</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ff2d55"></div>Robo / Peligroso</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ff9f0a"></div>Sospechoso / Acoso</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#0a84ff"></div>Vandalismo / Otro</div>
+</div>
+
+<!-- BOTTOM SHEET (mobile) -->
+<div class="sheet-overlay" id="sheet-overlay" onclick="collapseSheet()"></div>
+<div class="bottom-sheet" id="bottom-sheet">
+  <div class="sheet-handle-wrap" id="sheet-handle"><div class="sheet-handle"></div></div>
+  <div class="sheet-tabs">
+    <div class="sheet-tab active" onclick="switchSheetTab('incidents')">Incidentes</div>
+    <div class="sheet-tab" onclick="switchSheetTab('zones')">Zonas</div>
+  </div>
+  <div class="sheet-body">
+    <div class="tab-panel active" id="mob-incidents">
+      <div class="filter-bar">
+        <div class="filter-chip active" onclick="filterReports(this,'all')">Todos</div>
+        <div class="filter-chip td" onclick="filterReports(this,'Robo')">🔪 Robo</div>
+        <div class="filter-chip td" onclick="filterReports(this,'Persona peligrosa')">👤 Peligroso</div>
+        <div class="filter-chip tw" onclick="filterReports(this,'Sospechoso')">👁 Sospechoso</div>
+        <div class="filter-chip" onclick="filterReports(this,'Vandalismo')">🔧 Vandalismo</div>
+      </div>
+      <div class="report-list" id="mob-report-list"></div>
+    </div>
+    <div class="tab-panel" id="mob-zones">
+      <div class="zone-list" id="mob-zone-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <div class="nav-btn active" id="nav-map" onclick="navSelect('map')">
+    <span class="nav-icon">🗺️</span><span class="nav-label">Mapa</span>
+  </div>
+  <div class="nav-report-btn" onclick="openReportModal()">
+    <div class="nav-report-inner">⚠️</div>
+    <div class="nav-report-label">Reportar</div>
+  </div>
+  <div class="nav-btn" id="nav-list" onclick="navSelect('list')">
+    <span class="nav-icon">📋</span><span class="nav-label">Reportes</span>
+  </div>
+</div>
+
+<!-- REPORT MODAL -->
+<div class="modal-overlay" id="report-modal" onclick="handleOverlay(event,'report-modal')">
+  <div class="modal">
+    <div class="modal-drag"><div class="modal-drag-bar"></div></div>
+    <div class="modal-header">
+      <div class="modal-title">⚠️ Nuevo reporte</div>
+      <div class="modal-close" onclick="closeModal('report-modal')">✕</div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">Ubicación</div>
+      <div class="location-badge" id="loc-badge">
+        <div class="location-dot"></div>
+        <span id="loc-text">Obteniendo GPS…</span>
+        <button onclick="getGPSForReport()" style="margin-left:auto;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;flex-shrink:0;">GPS</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">Tipo de incidente</div>
+      <div class="type-selector">
+        <div class="type-option selected" data-type="Robo" onclick="selectType(this)"><span class="type-emoji-large">🔪</span>Robo</div>
+        <div class="type-option" data-type="Persona peligrosa" onclick="selectType(this)"><span class="type-emoji-large">👤</span>Peligroso</div>
+        <div class="type-option" data-type="Sospechoso" onclick="selectType(this)"><span class="type-emoji-large">👁</span>Sospechoso</div>
+        <div class="type-option" data-type="Vandalismo" onclick="selectType(this)"><span class="type-emoji-large">🔧</span>Vandalismo</div>
+        <div class="type-option" data-type="Acoso" onclick="selectType(this)"><span class="type-emoji-large">⚡</span>Acoso</div>
+        <div class="type-option" data-type="Otro" onclick="selectType(this)"><span class="type-emoji-large">❗</span>Otro</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">Nivel de peligro</div>
+      <div class="danger-selector" id="danger-selector">
+        <span class="danger-star-input" data-val="1" onmouseenter="hoverStar(1)" onmouseleave="unhoverStar()" onclick="selectDanger(1)">★</span>
+        <span class="danger-star-input" data-val="2" onmouseenter="hoverStar(2)" onmouseleave="unhoverStar()" onclick="selectDanger(2)">★</span>
+        <span class="danger-star-input" data-val="3" onmouseenter="hoverStar(3)" onmouseleave="unhoverStar()" onclick="selectDanger(3)">★</span>
+        <span class="danger-star-input" data-val="4" onmouseenter="hoverStar(4)" onmouseleave="unhoverStar()" onclick="selectDanger(4)">★</span>
+        <span class="danger-star-input" data-val="5" onmouseenter="hoverStar(5)" onmouseleave="unhoverStar()" onclick="selectDanger(5)">★</span>
+        <span class="danger-level-label" id="danger-label">Selecciona</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">Descripción</div>
+      <textarea class="form-textarea" id="report-desc" placeholder="¿Qué ocurrió? Describe brevemente…"></textarea>
+    </div>
+    <div class="form-group">
+      <div class="form-label">Tu nombre (opcional)</div>
+      <input type="text" class="form-input" id="report-user" placeholder="Ej. vecino_norte">
+    </div>
+    <button class="btn-submit" id="btn-submit" onclick="submitReport()" disabled>Enviar a la comunidad</button>
+  </div>
+</div>
+
+<!-- INCIDENT MODAL -->
+<div class="modal-overlay" id="incident-modal" onclick="handleOverlay(event,'incident-modal')">
+  <div class="modal">
+    <div class="modal-drag"><div class="modal-drag-bar"></div></div>
+    <div class="modal-header">
+      <div class="modal-title">Detalle del incidente</div>
+      <div class="modal-close" onclick="closeModal('incident-modal')">✕</div>
+    </div>
+    <div id="incident-detail-content"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><span id="toast-msg"></span></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  FIREBASE CONFIG
+// ═══════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyDlwGvNp3cdzOQutS2_HvVXqsIYLyuJq6w",
+  authDomain: "lcmaps-7e4be.firebaseapp.com",
+  databaseURL: "https://lcmaps-7e4be-default-rtdb.firebaseio.com",
+  projectId: "lcmaps-7e4be",
+  storageBucket: "lcmaps-7e4be.firebasestorage.app",
+  messagingSenderId: "987772844528",
+  appId: "1:987772844528:web:6765696a282c4a22dec535",
+  measurementId: "G-V3XRXNXYMW"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const COLLECTION = 'reports';
+
+// ═══════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════
+const TYPE_ICONS = {Robo:'🔪','Persona peligrosa':'👤',Sospechoso:'👁',Vandalismo:'🔧',Acoso:'⚡',Otro:'❗'};
+const TYPE_CLASS = {Robo:'danger','Persona peligrosa':'danger',Sospechoso:'warning',Vandalismo:'info',Acoso:'warning',Otro:'info'};
+const TYPE_COLOR = {danger:'#ff2d55',warning:'#ff9f0a',info:'#0a84ff'};
+const DANGER_LBL = ['','Muy bajo','Bajo','Moderado','Alto','Extremo'];
+const STAR_LBL   = ['','Muy bajo 😐','Bajo 🟡','Moderado 🟠','Alto 🔴','Extremo ☠️'];
+const BOGOTA     = [4.7110, -74.0721];
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let map, userMarker, userCircle;
+let reports       = [];       // local cache from Firestore
+let leafletMarkers = {};
+let heatCircles   = {};
+let activeFilter  = 'all';
+let selectedType  = 'Robo';
+let selectedDanger = 0;
+let reportLat     = null;
+let reportLng     = null;
+let mapPickMode   = false;
+
+// ═══════════════════════════════════════════════
+//  MAP INIT
+// ═══════════════════════════════════════════════
+function initMap() {
+  map = L.map('map', {
+    center: BOGOTA,
+    zoom: 13,
+    zoomControl: true,
+    attributionControl: true,
+    tap: true,
+    tapTolerance: 15,
+    touchZoom: true,
+    bounceAtZoomLimits: true
+  });
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
+    maxZoom: 19,
+    minZoom: 11
+  }).addTo(map);
+
+  map.zoomControl.setPosition('bottomright');
+}
+
+// ═══════════════════════════════════════════════
+//  FIRESTORE — REAL-TIME LISTENER
+// ═══════════════════════════════════════════════
+function startFirestoreListener() {
+  setFbDot('connecting');
+
+  db.collection(COLLECTION)
+    .orderBy('ts', 'desc')
+    .limit(200)
+    .onSnapshot(
+      snapshot => {
+        setFbDot('live');
+
+        snapshot.docChanges().forEach(change => {
+          const data = change.doc.data();
+          const report = { ...data, id: change.doc.id };
+
+          if (change.type === 'added') {
+            // Only add if not already in local cache
+            if (!reports.find(r => r.id === report.id)) {
+              reports.unshift(report);
+              addMarkerToMap(report);
+            }
+          }
+
+          if (change.type === 'modified') {
+            const idx = reports.findIndex(r => r.id === report.id);
+            if (idx !== -1) {
+              reports[idx] = report;
+              // Refresh popup if open
+              removeMarkerFromMap(report.id);
+              addMarkerToMap(report);
+            }
+          }
+
+          if (change.type === 'removed') {
+            reports = reports.filter(r => r.id !== report.id);
+            removeMarkerFromMap(report.id);
+          }
+        });
+
+        renderAll();
+      },
+      err => {
+        setFbDot('error');
+        console.error('Firestore error:', err);
+        showToast('⚠️ Error de conexión con la base de datos');
+      }
+    );
+}
+
+function setFbDot(state) {
+  const dot = document.getElementById('fb-dot');
+  dot.className = 'fb-dot';
+  if (state === 'live')        dot.classList.add('live');
+  else if (state === 'error')  dot.classList.add('error');
+  // 'connecting' leaves default grey
+}
+
+// ═══════════════════════════════════════════════
+//  SUBMIT REPORT → FIRESTORE
+// ═══════════════════════════════════════════════
+function submitReport() {
+  if (reportLat === null) { showToast('📍 Obtén tu ubicación GPS primero'); return; }
+  if (!selectedDanger)   { showToast('⚠️ Indica el nivel de peligro'); return; }
+
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+
+  const desc = document.getElementById('report-desc').value.trim() || 'Incidente reportado por la comunidad.';
+  const user = document.getElementById('report-user').value.trim() || 'Anónimo';
+
+  const newReport = {
+    type: selectedType,
+    danger: selectedDanger,
+    lat: reportLat,
+    lng: reportLng,
+    desc,
+    user,
+    ts: Date.now(),
+    votes: 1,
+    confirms: 1,
+    falses: 0
+  };
+
+  db.collection(COLLECTION).add(newReport)
+    .then(() => {
+      closeModal('report-modal');
+      showToast('✅ Reporte publicado en tiempo real 🔥');
+    })
+    .catch(err => {
+      console.error(err);
+      btn.disabled = false;
+      btn.textContent = 'Enviar a la comunidad';
+      showToast('❌ Error al guardar. Intenta de nuevo.');
+    });
+}
+
+// ═══════════════════════════════════════════════
+//  UPDATE REPORT IN FIRESTORE
+// ═══════════════════════════════════════════════
+function updateReportInDb(id, updates) {
+  db.collection(COLLECTION).doc(id).update(updates).catch(err => {
+    console.error('Update error:', err);
+    showToast('⚠️ No se pudo actualizar. Intenta de nuevo.');
+  });
+}
+
+function submitVote(id, v) {
+  const r = reports.find(rep => rep.id === id);
+  if (!r) return;
+  const newDanger = Math.round((r.danger * r.votes + v) / (r.votes + 1));
+  const newVotes  = r.votes + 1;
+  updateReportInDb(id, { danger: newDanger, votes: newVotes });
+  closeModal('incident-modal');
+  showToast('⭐ Calificación guardada en Firestore');
+}
+
+function confirmReport(id) {
+  const r = reports.find(rep => rep.id === id);
+  if (!r) return;
+  updateReportInDb(id, { confirms: r.confirms + 1 });
+  closeModal('incident-modal');
+  showToast('✅ Confirmación guardada');
+}
+
+function falseReport(id) {
+  const r = reports.find(rep => rep.id === id);
+  if (!r) return;
+  updateReportInDb(id, { falses: r.falses + 1 });
+  closeModal('incident-modal');
+  showToast('ℹ️ Marcado como falsa alarma');
+}
+
+// ═══════════════════════════════════════════════
+//  MAP MARKERS
+// ═══════════════════════════════════════════════
+function addMarkerToMap(report) {
+  if (leafletMarkers[report.id]) return; // already on map
+  const cl    = TYPE_CLASS[report.type] || 'info';
+  const color = TYPE_COLOR[cl];
+  const icon  = TYPE_ICONS[report.type];
+
+  const markerIcon = L.divIcon({
+    html: `<div class="custom-marker" style="width:32px;height:32px;background:${color};box-shadow:0 2px 8px ${color}88;"><div class="custom-marker-inner">${icon}</div></div>`,
+    className: '',
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -34]
+  });
+
+  const marker = L.marker([report.lat, report.lng], { icon: markerIcon }).addTo(map);
+
+  const popupEl = document.createElement('div');
+  popupEl.className = 'popup-inner';
+  popupEl.innerHTML = `
+    <div class="popup-type" style="color:${color}">${icon} ${report.type}</div>
+    <div class="popup-desc">${report.desc}</div>
+    <div class="popup-meta">📍 ${report.lat.toFixed(4)}, ${report.lng.toFixed(4)} · ${getAge(report.ts)} · ${report.user}</div>
+    <div class="popup-stars">${[1,2,3,4,5].map(i=>`<span class="popup-star${i<=report.danger?' f':''}">★</span>`).join('')}</div>
+    <button class="popup-btn" onclick="map.closePopup();showIncident('${report.id}')">Ver detalle y votar</button>`;
+  marker.bindPopup(popupEl, { maxWidth: 280 });
+
+  const circle = L.circle([report.lat, report.lng], {
+    radius: 80,
+    color,
+    fillColor: color,
+    fillOpacity: 0.06 + report.danger * 0.02,
+    weight: 0
+  }).addTo(map);
+
+  leafletMarkers[report.id] = marker;
+  heatCircles[report.id]    = circle;
+}
+
+function removeMarkerFromMap(id) {
+  if (leafletMarkers[id]) { map.removeLayer(leafletMarkers[id]); delete leafletMarkers[id]; }
+  if (heatCircles[id])    { map.removeLayer(heatCircles[id]);    delete heatCircles[id]; }
+}
+
+// ═══════════════════════════════════════════════
+//  GPS
+// ═══════════════════════════════════════════════
+function locateUser(silent = false) {
+  if (!navigator.geolocation) {
+    if (!silent) showToast('❌ Tu navegador no soporta GPS');
+    return;
+  }
+  const btn = document.getElementById('gps-btn');
+  btn.classList.add('locating');
+  btn.textContent = '⏳';
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      btn.classList.remove('locating');
+      btn.textContent = '📍';
+      const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+
+      if (userCircle) map.removeLayer(userCircle);
+      if (userMarker) map.removeLayer(userMarker);
+
+      userCircle = L.circle([lat, lng], {
+        radius: accuracy, color: '#0a84ff', fillColor: '#0a84ff',
+        fillOpacity: 0.08, weight: 1
+      }).addTo(map);
+
+      userMarker = L.circleMarker([lat, lng], {
+        radius: 8, color: '#fff', fillColor: '#0a84ff', fillOpacity: 1, weight: 2
+      }).addTo(map).bindTooltip('Tú estás aquí', { permanent: false, direction: 'top' });
+
+      map.setView([lat, lng], 16);
+      if (!silent) showToast('📍 Ubicación encontrada');
+    },
+    err => {
+      btn.classList.remove('locating');
+      btn.textContent = '📍';
+      if (!silent) {
+        const msgs = {1:'Permiso denegado',2:'Ubicación no disponible',3:'Tiempo agotado'};
+        showToast('⚠️ ' + (msgs[err.code] || 'Error GPS'));
+      }
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+  );
+}
+
+function getGPSForReport() {
+  const badge = document.getElementById('loc-badge');
+  const text  = document.getElementById('loc-text');
+  text.textContent = 'Obteniendo ubicación…';
+
+  if (!navigator.geolocation) {
+    text.textContent = 'GPS no disponible — toca el mapa';
+    enableMapPick();
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      reportLat = pos.coords.latitude;
+      reportLng = pos.coords.longitude;
+      badge.classList.add('got');
+      text.textContent = `${reportLat.toFixed(5)}, ${reportLng.toFixed(5)}`;
+      document.getElementById('btn-submit').disabled = false;
+    },
+    () => {
+      text.textContent = 'GPS no disponible — toca el mapa para ubicar';
+      enableMapPick();
+    },
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+  );
+}
+
+function enableMapPick() {
+  if (mapPickMode) return;
+  mapPickMode = true;
+  showToast('👆 Toca el mapa para ubicar el incidente');
+  closeModal('report-modal');
+  setTimeout(() => {
+    map.once('click', e => {
+      reportLat = e.latlng.lat;
+      reportLng = e.latlng.lng;
+      mapPickMode = false;
+      const badge = document.getElementById('loc-badge');
+      const text  = document.getElementById('loc-text');
+      badge.classList.add('got');
+      text.textContent = `${reportLat.toFixed(5)}, ${reportLng.toFixed(5)} (tocado)`;
+      document.getElementById('btn-submit').disabled = false;
+      openModal('report-modal');
+    });
+  }, 300);
+}
+
+// ═══════════════════════════════════════════════
+//  RENDER LISTS
+// ═══════════════════════════════════════════════
+function renderAll() {
+  renderCards('mob-report-list');
+  renderCards('dsk-report-list');
+  renderZones('mob-zone-list');
+  renderZones('dsk-zone-list');
+  document.getElementById('total-reports').textContent = reports.length;
+}
+
+function renderCards(cid) {
+  const el = document.getElementById(cid); if (!el) return;
+  const list = activeFilter === 'all' ? reports : reports.filter(r => r.type === activeFilter);
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📍</div><div class="empty-text">Sin reportes${activeFilter !== 'all' ? ' para este filtro' : ''}.<br>¡Sé el primero en alertar!</div></div>`;
+    return;
+  }
+  el.innerHTML = list.map(r => {
+    const cl = TYPE_CLASS[r.type] || 'info';
+    return `<div class="report-card ${cl}" onclick="flyToReport('${r.id}')">
+      <div class="card-top">
+        <div class="card-type-row"><span style="font-size:14px">${TYPE_ICONS[r.type]}</span><span class="card-type-label">${r.type}</span></div>
+        <span class="card-time">${getAge(r.ts)}</span>
+      </div>
+      <div class="card-desc">${r.desc}</div>
+      <div class="card-bottom">
+        <span class="card-location">📍 ${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}</span>
+        <div class="danger-stars">${[1,2,3,4,5].map(i=>`<span class="star${i<=r.danger?' filled':''}">★</span>`).join('')}<span class="card-votes">(${r.votes})</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderZones(cid) {
+  const el = document.getElementById(cid); if (!el) return;
+  if (!reports.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🗺️</div><div class="empty-text">Aún no hay zonas con incidentes.</div></div>`;
+    return;
+  }
+  const cells = {};
+  reports.forEach(r => {
+    const key = `${r.lat.toFixed(3)},${r.lng.toFixed(3)}`;
+    if (!cells[key]) cells[key] = { lat: r.lat, lng: r.lng, reports: [] };
+    cells[key].reports.push(r);
+  });
+  const sorted = Object.values(cells).sort((a,b) => b.reports.length - a.reports.length).slice(0, 8);
+  el.innerHTML = sorted.map((c, i) => {
+    const n    = c.reports.length;
+    const risk = n <= 1 ? 'low' : n <= 3 ? 'med' : 'high';
+    const avg  = (c.reports.reduce((a, b) => a + b.danger, 0) / n).toFixed(1);
+    const barCol = risk === 'high' ? '#ff2d55' : risk === 'med' ? '#ff9f0a' : '#30d158';
+    return `<div class="zone-card" onclick="flyToZone(${c.lat},${c.lng})">
+      <div class="zone-name-row">
+        <span class="zone-name">Zona ${i+1} · ${c.lat.toFixed(3)},${c.lng.toFixed(3)}</span>
+        <span class="zone-risk risk-${risk}">${n<=1?'Bajo':n<=3?'Moderado':'Alto'}</span>
+      </div>
+      <div class="zone-stats-row">
+        <span class="zone-mini-stat">Incidentes: <strong>${n}</strong></span>
+        <span class="zone-mini-stat">Peligro: <strong>${'★'.repeat(Math.round(avg))}</strong></span>
+      </div>
+      <div class="mini-bar"><div class="mini-bar-fill" style="width:${Math.min(n/5*100,100)}%;background:${barCol}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function flyToReport(id) {
+  const r = reports.find(x => x.id === id); if (!r) return;
+  map.setView([r.lat, r.lng], 17);
+  if (leafletMarkers[id]) leafletMarkers[id].openPopup();
+  if (window.innerWidth < 768) collapseSheet();
+}
+
+function flyToZone(lat, lng) {
+  map.setView([lat, lng], 17);
+  if (window.innerWidth < 768) collapseSheet();
+}
+
+// ═══════════════════════════════════════════════
+//  INCIDENT DETAIL
+// ═══════════════════════════════════════════════
+function showIncident(id) {
+  const r = reports.find(rep => rep.id === id); if (!r) return;
+  const tc  = TYPE_CLASS[r.type] || 'info';
+  const ibg = tc === 'danger' ? 'rgba(255,45,85,.15)' : tc === 'warning' ? 'rgba(255,159,10,.15)' : 'rgba(10,132,255,.15)';
+  const credPct = Math.round((r.confirms / (r.confirms + r.falses + 1)) * 100);
+  const mapsUrl = `https://www.openstreetmap.org/?mlat=${r.lat}&mlon=${r.lng}#map=17/${r.lat}/${r.lng}`;
+
+  document.getElementById('incident-detail-content').innerHTML = `
+    <div class="incident-header-row">
+      <div class="incident-icon" style="background:${ibg}">${TYPE_ICONS[r.type]}</div>
+      <div><div class="incident-title">${r.type}</div><div class="incident-sub">${getAge(r.ts)} · por ${r.user}</div></div>
+    </div>
+    <p style="font-size:13px;color:#9ca3af;line-height:1.5;margin-bottom:10px">${r.desc}</p>
+    <a class="coords-link" href="${mapsUrl}" target="_blank">🌐 Ver en OpenStreetMap · ${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}</a>
+    <div style="display:flex;gap:4px;align-items:center;margin:14px 0">
+      ${[1,2,3,4,5].map(i=>`<span style="font-size:20px;color:${i<=r.danger?'#ffa502':'#252525'}">★</span>`).join('')}
+      <span style="font-size:11px;color:var(--muted);margin-left:6px">${DANGER_LBL[r.danger]} · ${r.votes} votos</span>
+    </div>
+    <div class="vote-section">
+      <div class="vote-title">Califica este reporte</div>
+      <div class="vote-stars" id="vote-stars">${[1,2,3,4,5].map(i=>`<span class="vote-star" data-val="${i}" onmouseenter="hoverVote(${i})" onmouseleave="unhoverVote()" onclick="submitVote('${r.id}',${i})">★</span>`).join('')}</div>
+      <div class="vote-desc" id="vote-desc">Toca las estrellas para calificar</div>
+      <div class="vote-actions">
+        <button class="btn-confirm" onclick="confirmReport('${r.id}')">👍 Confirmar (${r.confirms})</button>
+        <button class="btn-false"   onclick="falseReport('${r.id}')">👎 Falsa (${r.falses})</button>
+      </div>
+      <div class="cred-wrap">
+        <div class="cred-label"><span>Credibilidad</span><span>${credPct}%</span></div>
+        <div class="cred-bar"><div class="cred-fill" style="width:${credPct}%"></div></div>
+      </div>
+    </div>`;
+  openModal('incident-modal');
+}
+
+function hoverVote(v){document.querySelectorAll('#vote-stars .vote-star').forEach(s=>s.classList.toggle('hover',parseInt(s.dataset.val)<=v));const l=['','Muy bajo','Bajo','Moderado','Alto','Extremo'];document.getElementById('vote-desc').textContent=l[v]+' '+'★'.repeat(v);}
+function unhoverVote(){document.querySelectorAll('#vote-stars .vote-star').forEach(s=>s.classList.remove('hover'));document.getElementById('vote-desc').textContent='Toca las estrellas para calificar';}
+
+// ═══════════════════════════════════════════════
+//  REPORT MODAL FORM
+// ═══════════════════════════════════════════════
+function openReportModal() {
+  reportLat = reportLng = null;
+  selectedDanger = 0;
+  updateDangerStars(0, false);
+  document.getElementById('report-desc').value = '';
+  document.getElementById('report-user').value = '';
+  document.getElementById('danger-label').textContent = 'Selecciona';
+  document.getElementById('loc-badge').classList.remove('got');
+  document.getElementById('loc-text').textContent = 'Obteniendo GPS…';
+  document.getElementById('btn-submit').disabled = true;
+  document.getElementById('btn-submit').textContent = 'Enviar a la comunidad';
+  // Reset type selector
+  document.querySelectorAll('.type-option').forEach(o => o.classList.remove('selected'));
+  document.querySelector('.type-option[data-type="Robo"]').classList.add('selected');
+  selectedType = 'Robo';
+  getGPSForReport();
+  openModal('report-modal');
+}
+
+function selectType(el){document.querySelectorAll('.type-option').forEach(o=>o.classList.remove('selected'));el.classList.add('selected');selectedType=el.dataset.type;}
+function hoverStar(v){updateDangerStars(v,true);document.getElementById('danger-label').textContent=STAR_LBL[v];}
+function unhoverStar(){updateDangerStars(selectedDanger,false);document.getElementById('danger-label').textContent=STAR_LBL[selectedDanger]||'Selecciona';}
+function selectDanger(v){selectedDanger=v;updateDangerStars(v,false);document.getElementById('danger-label').textContent=STAR_LBL[v];}
+function updateDangerStars(val,hover){document.querySelectorAll('.danger-star-input').forEach(s=>{const v=parseInt(s.dataset.val);if(hover){s.classList.toggle('hover',v<=val);}else{s.classList.remove('hover');s.classList.toggle('selected',v<=val);}});}
+
+// ═══════════════════════════════════════════════
+//  FILTER
+// ═══════════════════════════════════════════════
+function filterReports(el, filter) {
+  activeFilter = filter;
+  el.closest('.filter-bar,.sidebar-filter-bar').querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════
+function switchDskTab(t){
+  document.querySelectorAll('.sidebar-tab').forEach((el,i)=>el.classList.toggle('active',(t==='incidents'&&i===0)||(t==='zones'&&i===1)));
+  document.getElementById('dsk-incidents').classList.toggle('active',t==='incidents');
+  document.getElementById('dsk-zones').classList.toggle('active',t==='zones');
+}
+function switchSheetTab(t){
+  document.querySelectorAll('.sheet-tab').forEach((el,i)=>el.classList.toggle('active',(t==='incidents'&&i===0)||(t==='zones'&&i===1)));
+  document.getElementById('mob-incidents').classList.toggle('active',t==='incidents');
+  document.getElementById('mob-zones').classList.toggle('active',t==='zones');
+}
+
+// ═══════════════════════════════════════════════
+//  BOTTOM SHEET
+// ═══════════════════════════════════════════════
+function initSheet(){
+  const sheet=document.getElementById('bottom-sheet');
+  const handle=document.getElementById('sheet-handle');
+  let startY,startT,dragging=false;
+  const maxT=()=>window.innerHeight-64-56;
+  const getT=()=>new DOMMatrix(window.getComputedStyle(sheet).transform).m42||0;
+  const setT=(y,anim)=>{sheet.style.transition=anim?'transform .32s cubic-bezier(.32,.72,0,1)':'none';sheet.style.transform=`translateY(${y}px)`;};
+  setT(maxT());
+  const onStart=e=>{dragging=true;startY=(e.touches?e.touches[0].clientY:e.clientY);startT=getT();sheet.style.transition='none';};
+  const onMove=e=>{if(!dragging)return;const dy=(e.touches?e.touches[0].clientY:e.clientY)-startY;setT(Math.max(0,Math.min(maxT(),startT+dy)));};
+  const onEnd=()=>{if(!dragging)return;dragging=false;const t=getT();if(t<maxT()/2)expandSheet();else collapseSheet();};
+  handle.addEventListener('touchstart',onStart,{passive:true});
+  window.addEventListener('touchmove',e=>{if(dragging){e.preventDefault();onMove(e);}},{passive:false});
+  window.addEventListener('touchend',onEnd);
+  handle.addEventListener('mousedown',onStart);
+  window.addEventListener('mousemove',onMove);
+  window.addEventListener('mouseup',onEnd);
+  window.addEventListener('resize',()=>{if(!sheetOpen)setT(maxT(),true);});
+}
+let sheetOpen=false;
+function expandSheet(){sheetOpen=true;const s=document.getElementById('bottom-sheet');s.style.transition='transform .32s cubic-bezier(.32,.72,0,1)';s.style.transform='translateY(0)';document.getElementById('sheet-overlay').classList.add('visible');document.getElementById('nav-list').classList.add('active');document.getElementById('nav-map').classList.remove('active');}
+function collapseSheet(){sheetOpen=false;const maxT=window.innerHeight-64-56;const s=document.getElementById('bottom-sheet');s.style.transition='transform .32s cubic-bezier(.32,.72,0,1)';s.style.transform=`translateY(${maxT}px)`;document.getElementById('sheet-overlay').classList.remove('visible');document.getElementById('nav-map').classList.add('active');document.getElementById('nav-list').classList.remove('active');}
+function navSelect(w){w==='list'?expandSheet():collapseSheet();}
+
+// ═══════════════════════════════════════════════
+//  MODALS / TOAST / UTILS
+// ═══════════════════════════════════════════════
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function handleOverlay(e,id){if(e.target===document.getElementById(id))closeModal(id);}
+
+let toastTimer;
+function showToast(msg){const t=document.getElementById('toast');document.getElementById('toast-msg').textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3000);}
+
+function getAge(ts){const d=Date.now()-ts;if(d<60000)return'Ahora';if(d<3600000)return Math.floor(d/60000)+' min';if(d<86400000)return Math.floor(d/3600000)+' h';return Math.floor(d/86400000)+'d';}
+
+// ═══════════════════════════════════════════════
+//  START
+// ═══════════════════════════════════════════════
+initMap();
+initSheet();
+startFirestoreListener();   // loads data + keeps in sync in real time
+locateUser(true);            // show user position silently in background
+</script>
+</body>
+</html>
