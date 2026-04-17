@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>LC Map Ver 5.1</title>
+<title>LCMap Ver 5.2</title>
 
 <!-- Leaflet -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
@@ -81,14 +81,14 @@ header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:rgb
 /* BOTTOM SHEET */
 .sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:599;opacity:0;pointer-events:none;transition:opacity .3s;}
 .sheet-overlay.visible{opacity:1;pointer-events:all;}
-.bottom-sheet{position:fixed;left:0;right:0;bottom:0;z-index:600;background:var(--surface);border-radius:18px 18px 0 0;border-top:1px solid var(--border);will-change:transform;max-height:92vh;display:flex;flex-direction:column;}
+.bottom-sheet{position:fixed;left:0;right:0;bottom:0;z-index:600;background:var(--surface);border-radius:18px 18px 0 0;border-top:1px solid var(--border);will-change:transform;height:calc(92vh - var(--nav-h));max-height:calc(92vh - var(--nav-h));display:flex;flex-direction:column;}
 .sheet-handle-wrap{padding:10px 0 4px;display:flex;justify-content:center;flex-shrink:0;cursor:grab;}
 .sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;}
 .sheet-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;padding:0 4px;}
 .sheet-tab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;letter-spacing:.5px;}
 .sheet-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
 .sheet-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
-.tab-panel{display:none;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}.tab-panel.active{display:block;}
+.tab-panel{display:none;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}.tab-panel.active{display:block;height:100%;}
 
 /* FILTER BAR */
 .filter-bar{padding:10px 12px;display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:10;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.2);}
@@ -276,7 +276,7 @@ header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:rgb
 
 <!-- HEADER -->
 <header>
-  <div class="logo"><div class="logo-icon">🔺</div>LCMap<span>ver 5.1</span></div>
+  <div class="logo"><div class="logo-icon">🔺</div>LcMap<span>Ver 5.2</span></div>
   <div class="header-right">
     <div class="fb-dot" id="fb-dot" title="Conexión Firebase"></div>
     <div class="hstat">
