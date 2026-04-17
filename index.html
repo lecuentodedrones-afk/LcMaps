@@ -87,13 +87,14 @@ header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:rgb
 .sheet-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;padding:0 4px;}
 .sheet-tab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;letter-spacing:.5px;}
 .sheet-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
-.sheet-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
-.tab-panel{display:none;}.tab-panel.active{display:block;}
+.sheet-body{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.tab-panel{display:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}.tab-panel.active{display:flex;flex-direction:column;}
 
 /* FILTER BAR */
-.filter-bar{padding:10px 12px;display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-bottom:1px solid var(--border);}
+.filter-bar{padding:10px 12px;display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:10;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.2);}
 .filter-bar::-webkit-scrollbar{display:none;}
-.filter-chip{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid var(--border);cursor:pointer;color:var(--muted);background:transparent;white-space:nowrap;flex-shrink:0;}
+.filter-chip{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid var(--border);cursor:pointer;color:var(--muted);background:transparent;white-space:nowrap;flex-shrink:0;transition:all .2s;}
+.filter-chip:active{transform:scale(.95);}
 .filter-chip.active{border-color:var(--accent);color:var(--accent);background:rgba(255,71,87,.1);}
 .filter-chip.td.active{border-color:var(--danger);color:var(--danger);background:rgba(255,45,85,.1);}
 .filter-chip.tw.active{border-color:var(--warning);color:var(--warning);background:rgba(255,159,10,.1);}
@@ -138,6 +139,11 @@ header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:rgb
 .empty-icon{font-size:36px;opacity:.4;}
 .empty-text{font-size:13px;line-height:1.5;}
 
+/* SKELETON LOADING */
+.skeleton{background:linear-gradient(90deg,var(--surface2),var(--surface3),var(--surface2));background-size:200% 100%;animation:skeleton-load 1.5s infinite;}
+@keyframes skeleton-load{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+.skeleton-card{height:100px;border-radius:12px;margin-bottom:8px;border:1px solid var(--border);}
+
 /* BOTTOM NAV */
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:rgba(17,19,24,.96);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);z-index:700;display:flex;align-items:center;justify-content:space-around;padding:0 8px;padding-bottom:env(safe-area-inset-bottom,0px);}
 .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;cursor:pointer;color:var(--muted);border-radius:10px;}
@@ -149,6 +155,10 @@ header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:rgb
 .nav-report-inner{background:var(--accent);width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 20px rgba(255,71,87,.4);margin-top:-16px;transition:transform .15s;}
 .nav-report-btn:active .nav-report-inner{transform:scale(.93);}
 .nav-report-label{font-size:10px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.4px;}
+
+/* BADGES */
+.nav-badge{position:absolute;top:-4px;right:-4px;background:var(--accent);color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;box-shadow:0 2px 8px rgba(255,71,87,.4);animation:pulse .8s infinite;}
+@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
 
 /* MODALS */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:1200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;}
@@ -246,10 +256,20 @@ header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:rgb
 .sidebar-tabs-row{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
 .sidebar-tab{flex:1;padding:11px;text-align:center;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;letter-spacing:.5px;}
 .sidebar-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
-.sidebar-body{flex:1;overflow-y:auto;}
-.sidebar-panel{display:none;}.sidebar-panel.active{display:block;}
+.sidebar-body{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.sidebar-panel{display:none;flex:1;overflow-y:auto;}.sidebar-panel.active{display:flex;flex-direction:column;}
 .sidebar-filter-bar{padding:10px;display:flex;gap:5px;flex-wrap:wrap;border-bottom:1px solid var(--border);}
-::-webkit-scrollbar{width:0;}
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:3px;border:1px solid var(--border);}
+::-webkit-scrollbar-thumb:hover{background:var(--surface3);}
+
+/* Sticky filter bar */
+.filter-bar{padding:10px 12px;display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:10;flex-shrink:0;}
+
+/* Firefox scrollbar */
+.sheet-body,.sidebar-panel{scrollbar-color:var(--surface2) transparent;scrollbar-width:thin;}
+
 </style>
 </head>
 <body>
@@ -437,6 +457,40 @@ const DANGER_LBL = ['','Muy bajo','Bajo','Moderado','Alto','Extremo'];
 const STAR_LBL   = ['','Muy bajo 😐','Bajo 🟡','Moderado 🟠','Alto 🔴','Extremo ☠️'];
 const BOGOTA     = [4.7110, -74.0721];
 
+const BARRIOS = [
+  {name:'Chapinero',       lat:4.6486, lng:-74.0634},
+  {name:'Usaquén',         lat:4.7011, lng:-74.0322},
+  {name:'Santa Fe',        lat:4.5966, lng:-74.0775},
+  {name:'San Cristóbal',   lat:4.5655, lng:-74.0877},
+  {name:'Usme',            lat:4.4808, lng:-74.1291},
+  {name:'Tunjuelito',      lat:4.5741, lng:-74.1296},
+  {name:'Bosa',            lat:4.6185, lng:-74.1985},
+  {name:'Kennedy',         lat:4.6296, lng:-74.1623},
+  {name:'Fontibón',        lat:4.6699, lng:-74.1466},
+  {name:'Engativá',        lat:4.7047, lng:-74.1150},
+  {name:'Suba',            lat:4.7478, lng:-74.0831},
+  {name:'Barrios Unidos',  lat:4.6720, lng:-74.0810},
+  {name:'Teusaquillo',     lat:4.6430, lng:-74.0883},
+  {name:'Los Mártires',    lat:4.6075, lng:-74.0929},
+  {name:'Antonio Nariño',  lat:4.5938, lng:-74.1027},
+  {name:'Puente Aranda',   lat:4.6238, lng:-74.1127},
+  {name:'La Candelaria',   lat:4.5978, lng:-74.0750},
+  {name:'Rafael Uribe',    lat:4.5644, lng:-74.1094},
+  {name:'Ciudad Bolívar',  lat:4.5036, lng:-74.1661},
+  {name:'Sumapaz',         lat:4.2049, lng:-74.3148},
+  {name:'Palermo',         lat:4.6361, lng:-74.0679},
+  {name:'El Restrepo',     lat:4.5942, lng:-74.1106}
+];
+
+function getNearbyBarrio(lat, lng) {
+  let best = null, bestD = Infinity;
+  BARRIOS.forEach(b => {
+    const d = Math.abs(b.lat - lat) + Math.abs(b.lng - lng);
+    if (d < bestD) { bestD = d; best = b.name; }
+  });
+  return best || 'Bogotá';
+}
+
 // ═══════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════
@@ -450,6 +504,9 @@ let selectedDanger = 0;
 let reportLat     = null;
 let reportLng     = null;
 let mapPickMode   = false;
+let lastCheckTime = Date.now();  // Para tracking de reportes nuevos
+let newReportCount = 0;           // Contador de reportes nuevos
+
 
 // ═══════════════════════════════════════════════
 //  MAP INIT
@@ -553,6 +610,7 @@ function submitReport() {
     danger: selectedDanger,
     lat: reportLat,
     lng: reportLng,
+    barrio: getNearbyBarrio(reportLat, reportLng),
     desc,
     user,
     ts: Date.now(),
@@ -634,7 +692,7 @@ function addMarkerToMap(report) {
   popupEl.innerHTML = `
     <div class="popup-type" style="color:${color}">${icon} ${report.type}</div>
     <div class="popup-desc">${report.desc}</div>
-    <div class="popup-meta">📍 ${report.lat.toFixed(4)}, ${report.lng.toFixed(4)} · ${getAge(report.ts)} · ${report.user}</div>
+    <div class="popup-meta">📍 ${report.barrio || getNearbyBarrio(report.lat, report.lng)} · ${getAge(report.ts)} · ${report.user}</div>
     <div class="popup-stars">${[1,2,3,4,5].map(i=>`<span class="popup-star${i<=report.danger?' f':''}">★</span>`).join('')}</div>
     <button class="popup-btn" onclick="map.closePopup();showIncident('${report.id}')">Ver detalle y votar</button>`;
   marker.bindPopup(popupEl, { maxWidth: 280 });
@@ -775,7 +833,7 @@ function renderCards(cid) {
       </div>
       <div class="card-desc">${r.desc}</div>
       <div class="card-bottom">
-        <span class="card-location">📍 ${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}</span>
+        <span class="card-location">📍 ${r.barrio || getNearbyBarrio(r.lat, r.lng)}</span>
         <div class="danger-stars">${[1,2,3,4,5].map(i=>`<span class="star${i<=r.danger?' filled':''}">★</span>`).join('')}<span class="card-votes">(${r.votes})</span></div>
       </div>
     </div>`;
@@ -802,7 +860,7 @@ function renderZones(cid) {
     const barCol = risk === 'high' ? '#ff2d55' : risk === 'med' ? '#ff9f0a' : '#30d158';
     return `<div class="zone-card" onclick="flyToZone(${c.lat},${c.lng})">
       <div class="zone-name-row">
-        <span class="zone-name">Zona ${i+1} · ${c.lat.toFixed(3)},${c.lng.toFixed(3)}</span>
+        <span class="zone-name">${getNearbyBarrio(c.lat, c.lng)}</span>
         <span class="zone-risk risk-${risk}">${n<=1?'Bajo':n<=3?'Moderado':'Alto'}</span>
       </div>
       <div class="zone-stats-row">
@@ -839,7 +897,7 @@ function showIncident(id) {
   document.getElementById('incident-detail-content').innerHTML = `
     <div class="incident-header-row">
       <div class="incident-icon" style="background:${ibg}">${TYPE_ICONS[r.type]}</div>
-      <div><div class="incident-title">${r.type}</div><div class="incident-sub">${getAge(r.ts)} · por ${r.user}</div></div>
+      <div><div class="incident-title">${r.type}</div><div class="incident-sub">${getAge(r.ts)} · ${r.barrio || getNearbyBarrio(r.lat, r.lng)} · por ${r.user}</div></div>
     </div>
     <p style="font-size:13px;color:#9ca3af;line-height:1.5;margin-bottom:10px">${r.desc}</p>
     <a class="coords-link" href="${mapsUrl}" target="_blank">🌐 Ver en OpenStreetMap · ${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}</a>
@@ -905,17 +963,29 @@ function filterReports(el, filter) {
 }
 
 // ═══════════════════════════════════════════════
+//  SCROLL MEMORY
+// ═══════════════════════════════════════════════
+const scrollMemory={incidents:0,zones:0};
+function saveScrollPosition(tabName){const p=document.getElementById(`mob-${tabName}`);if(p)scrollMemory[tabName]=p.scrollTop;}
+function restoreScrollPosition(tabName){const p=document.getElementById(`mob-${tabName}`);if(p)setTimeout(()=>p.scrollTop=scrollMemory[tabName],0);}
+
+// ═══════════════════════════════════════════════
 //  TABS
 // ═══════════════════════════════════════════════
 function switchDskTab(t){
-  document.querySelectorAll('.sidebar-tab').forEach((el,i)=>el.classList.toggle('active',(t==='incidents'&&i===0)||(t==='zones'&&i===1)));
+  const oldIdx=Array.from(document.querySelectorAll('.sidebar-tab')).findIndex(e=>e.classList.contains('active'));
+  const newIdx=t==='incidents'?0:1;
+  document.querySelectorAll('.sidebar-tab').forEach((el,i)=>el.classList.toggle('active',i===newIdx));
   document.getElementById('dsk-incidents').classList.toggle('active',t==='incidents');
   document.getElementById('dsk-zones').classList.toggle('active',t==='zones');
 }
 function switchSheetTab(t){
+  const oldTab=document.querySelector('.sheet-tab.active');
+  if(oldTab){const oldName=oldTab.textContent.toLowerCase().includes('incidentes')?'incidents':'zones';saveScrollPosition(oldName);}
   document.querySelectorAll('.sheet-tab').forEach((el,i)=>el.classList.toggle('active',(t==='incidents'&&i===0)||(t==='zones'&&i===1)));
   document.getElementById('mob-incidents').classList.toggle('active',t==='incidents');
   document.getElementById('mob-zones').classList.toggle('active',t==='zones');
+  restoreScrollPosition(t);
 }
 
 // ═══════════════════════════════════════════════
@@ -958,10 +1028,27 @@ function showToast(msg){const t=document.getElementById('toast');document.getEle
 function getAge(ts){const d=Date.now()-ts;if(d<60000)return'Ahora';if(d<3600000)return Math.floor(d/60000)+' min';if(d<86400000)return Math.floor(d/3600000)+' h';return Math.floor(d/86400000)+'d';}
 
 // ═══════════════════════════════════════════════
-//  START
+//  SWIPE GESTURES (Tab switching)
 // ═══════════════════════════════════════════════
+function initSwipeGestures(){
+  let touchStartX=0;
+  const handleSwipe=(panel,dir)=>{
+    panel.addEventListener('touchstart',e=>touchStartX=e.touches[0].clientX,{passive:true});
+    panel.addEventListener('touchend',e=>{
+      const dx=touchStartX-e.changedTouches[0].clientX;
+      if(Math.abs(dx)>80){
+        if(dx>0&&dir==='left')switchSheetTab('zones');
+        if(dx<0&&dir==='right')switchSheetTab('incidents');
+      }
+    },{passive:true});
+  };
+  handleSwipe(document.getElementById('mob-incidents'),'left');
+  handleSwipe(document.getElementById('mob-zones'),'right');
+}
+
 initMap();
 initSheet();
+initSwipeGestures();
 startFirestoreListener();   // loads data + keeps in sync in real time
 locateUser(true);            // show user position silently in background
 </script>
