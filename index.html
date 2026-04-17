@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>ZonaAlerta — Bogotá 4</title>
+<title>ZonaAlerta — Bogotá 4.1</title>
 
 <!-- Leaflet -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
@@ -276,7 +276,7 @@ header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:rgb
 
 <!-- HEADER -->
 <header>
-  <div class="logo"><div class="logo-icon">🔺</div>Zona<span>Alerta 4</span></div>
+  <div class="logo"><div class="logo-icon">🔺</div>Zona<span>Alerta 4.1</span></div>
   <div class="header-right">
     <div class="fb-dot" id="fb-dot" title="Conexión Firebase"></div>
     <div class="hstat">
@@ -1012,11 +1012,7 @@ function initSheet(){
 }
 let sheetOpen=false;
 function expandSheet(){sheetOpen=true;const s=document.getElementById('bottom-sheet');s.style.transition='transform .32s cubic-bezier(.32,.72,0,1)';s.style.transform='translateY(0)';document.getElementById('sheet-overlay').classList.add('visible');document.getElementById('nav-list').classList.add('active');document.getElementById('nav-map').classList.remove('active');}
-function collapseSheet() {
-  sheetOpen = false;
-  const maxT = document.getElementById('bottom-sheet').offsetHeight - SHEET_NAV_H - SHEET_PEEK_H;
-  ...
-}
+function collapseSheet() {sheetOpen = false;const maxT = document.getElementById('bottom-sheet').offsetHeight - SHEET_NAV_H - SHEET_PEEK_H;}
 function navSelect(w){w==='list'?expandSheet():collapseSheet();}
 
 // ═══════════════════════════════════════════════
