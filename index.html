@@ -523,11 +523,11 @@ function initMap() {
     bounceAtZoomLimits: true
   });
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
-    maxZoom: 19,
-    minZoom: 11
-  }).addTo(map);
+L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
+  attribution: '© Stadia Maps © OpenStreetMap',
+  maxZoom: 19,
+  minZoom: 11
+}).addTo(map);
 
   map.zoomControl.setPosition('bottomright');
 }
