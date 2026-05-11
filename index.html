@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>LCMAP Beta 5.1</title>
+<title>LCMAP Beta 6</title>
 
 <!-- Leaflet -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
@@ -49,7 +49,7 @@ header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:rgb
 @media(max-width:767px){#map{bottom:var(--nav-h);}}
 
 /* Leaflet dark */
-.leaflet-tile-pane{filter:none;}
+.leaflet-tile-pane{filter:brightness(.55) saturate(.7) hue-rotate(190deg);}
 .leaflet-control-zoom{border:1px solid var(--border)!important;border-radius:8px!important;overflow:hidden;}
 .leaflet-control-zoom a{background:var(--surface)!important;color:var(--text)!important;border-bottom:1px solid var(--border)!important;}
 .leaflet-control-zoom a:hover{background:var(--surface2)!important;}
@@ -81,14 +81,14 @@ header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:rgb
 /* BOTTOM SHEET */
 .sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:599;opacity:0;pointer-events:none;transition:opacity .3s;}
 .sheet-overlay.visible{opacity:1;pointer-events:all;}
-.bottom-sheet{position:fixed;left:0;right:0;bottom:0;z-index:600;background:var(--surface);border-radius:18px 18px 0 0;border-top:1px solid var(--border);will-change:transform;height:calc(92vh - var(--nav-h));max-height:calc(92vh - var(--nav-h));display:flex;flex-direction:column;}
+.bottom-sheet{position:fixed;left:0;right:0;bottom:0;z-index:600;background:var(--surface);border-radius:18px 18px 0 0;border-top:1px solid var(--border);will-change:transform;max-height:92vh;display:flex;flex-direction:column;}
 .sheet-handle-wrap{padding:10px 0 4px;display:flex;justify-content:center;flex-shrink:0;cursor:grab;}
 .sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;}
 .sheet-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;padding:0 4px;}
 .sheet-tab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;letter-spacing:.5px;}
 .sheet-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
 .sheet-body{flex:1;display:flex;flex-direction:column;overflow:hidden;}
-.tab-panel{display:none;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}.tab-panel.active{display:block;height:100%;}
+.tab-panel{display:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}.tab-panel.active{display:flex;flex-direction:column;}
 
 /* FILTER BAR */
 .filter-bar{padding:10px 12px;display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:10;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.2);}
@@ -276,7 +276,7 @@ header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:rgb
 
 <!-- HEADER -->
 <header>
-  <div class="logo"><div class="logo-icon">🔺</div>LC<span>Robo Map</span></div>
+  <div class="logo"><div class="logo-icon">🔺</div>LeCuentoScooter<span>Robo Mapa</span></div>
   <div class="header-right">
     <div class="fb-dot" id="fb-dot" title="Conexión Firebase"></div>
     <div class="hstat">
@@ -457,6 +457,39 @@ const DANGER_LBL = ['','Muy bajo','Bajo','Moderado','Alto','Extremo'];
 const STAR_LBL   = ['','Muy bajo 😐','Bajo 🟡','Moderado 🟠','Alto 🔴','Extremo ☠️'];
 const BOGOTA     = [4.7110, -74.0721];
 
+const BARRIOS = [
+  {name:'Chapinero',       lat:4.6486, lng:-74.0634},
+  {name:'Usaquén',         lat:4.7011, lng:-74.0322},
+  {name:'Santa Fe',        lat:4.5966, lng:-74.0775},
+  {name:'San Cristóbal',   lat:4.5655, lng:-74.0877},
+  {name:'Usme',            lat:4.4808, lng:-74.1291},
+  {name:'Tunjuelito',      lat:4.5741, lng:-74.1296},
+  {name:'Bosa',            lat:4.6185, lng:-74.1985},
+  {name:'Kennedy',         lat:4.6296, lng:-74.1623},
+  {name:'Fontibón',        lat:4.6699, lng:-74.1466},
+  {name:'Engativá',        lat:4.7047, lng:-74.1150},
+  {name:'Suba',            lat:4.7478, lng:-74.0831},
+  {name:'Barrios Unidos',  lat:4.6720, lng:-74.0810},
+  {name:'Teusaquillo',     lat:4.6430, lng:-74.0883},
+  {name:'Los Mártires',    lat:4.6075, lng:-74.0929},
+  {name:'Antonio Nariño',  lat:4.5938, lng:-74.1027},
+  {name:'Puente Aranda',   lat:4.6238, lng:-74.1127},
+  {name:'La Candelaria',   lat:4.5978, lng:-74.0750},
+  {name:'Rafael Uribe',    lat:4.5644, lng:-74.1094},
+  {name:'Ciudad Bolívar',  lat:4.5036, lng:-74.1661},
+  {name:'Sumapaz',         lat:4.2049, lng:-74.3148},
+  {name:'Palermo',         lat:4.6361, lng:-74.0679},
+  {name:'El Restrepo',     lat:4.5942, lng:-74.1106}
+];
+function getNearbyBarrio(lat, lng) {
+  let best = null, bestD = Infinity;
+  BARRIOS.forEach(b => {
+    const d = Math.abs(b.lat - lat) + Math.abs(b.lng - lng);
+    if (d < bestD) { bestD = d; best = b.name; }
+  });
+  return best || 'Bogotá';
+}
+
 // ═══════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════
@@ -489,11 +522,11 @@ function initMap() {
     bounceAtZoomLimits: true
   });
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap',
-  maxZoom: 19,
-  minZoom: 11
-}).addTo(map)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
+    maxZoom: 19,
+    minZoom: 11
+  }).addTo(map);
 
   map.zoomControl.setPosition('bottomright');
 }
@@ -576,9 +609,8 @@ function submitReport() {
     danger: selectedDanger,
     lat: reportLat,
     lng: reportLng,
+    barrio: getNearbyBarrio(reportLat, reportLng),
     desc,
-    user,
-    ts: Date.now(),
     votes: 1,
     confirms: 1,
     falses: 0
@@ -657,7 +689,7 @@ function addMarkerToMap(report) {
   popupEl.innerHTML = `
     <div class="popup-type" style="color:${color}">${icon} ${report.type}</div>
     <div class="popup-desc">${report.desc}</div>
-    <div class="popup-meta">📍 ${report.lat.toFixed(4)}, ${report.lng.toFixed(4)} · ${getAge(report.ts)} · ${report.user}</div>
+    <div class="popup-meta">📍 ${report.barrio || getNearbyBarrio(report.lat, report.lng)} · ${getAge(report.ts)} · ${report.user}</div>
     <div class="popup-stars">${[1,2,3,4,5].map(i=>`<span class="popup-star${i<=report.danger?' f':''}">★</span>`).join('')}</div>
     <button class="popup-btn" onclick="map.closePopup();showIncident('${report.id}')">Ver detalle y votar</button>`;
   marker.bindPopup(popupEl, { maxWidth: 280 });
@@ -798,7 +830,7 @@ function renderCards(cid) {
       </div>
       <div class="card-desc">${r.desc}</div>
       <div class="card-bottom">
-        <span class="card-location">📍 ${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}</span>
+        <span class="card-location">📍 ${r.barrio || getNearbyBarrio(r.lat, r.lng)}</span>
         <div class="danger-stars">${[1,2,3,4,5].map(i=>`<span class="star${i<=r.danger?' filled':''}">★</span>`).join('')}<span class="card-votes">(${r.votes})</span></div>
       </div>
     </div>`;
@@ -978,7 +1010,7 @@ function initSheet(){
 let sheetOpen=false;
 function expandSheet(){sheetOpen=true;const s=document.getElementById('bottom-sheet');s.style.transition='transform .32s cubic-bezier(.32,.72,0,1)';s.style.transform='translateY(0)';document.getElementById('sheet-overlay').classList.add('visible');document.getElementById('nav-list').classList.add('active');document.getElementById('nav-map').classList.remove('active');}
 function collapseSheet(){sheetOpen=false;const maxT=window.innerHeight-64-56;const s=document.getElementById('bottom-sheet');s.style.transition='transform .32s cubic-bezier(.32,.72,0,1)';s.style.transform=`translateY(${maxT}px)`;document.getElementById('sheet-overlay').classList.remove('visible');document.getElementById('nav-map').classList.add('active');document.getElementById('nav-list').classList.remove('active');}
-function navSelect(w){w==='list'?expandSheet():collapseSheet();}
+function navSelect(w){if(w==='list'){sheetOpen?collapseSheet():expandSheet();}else{collapseSheet();map.invalidateSize();}}
 
 // ═══════════════════════════════════════════════
 //  MODALS / TOAST / UTILS
