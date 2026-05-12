@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>LCMAP Beta 7</title>
+<title>LcMap Beta 8</title>
 
 <!-- Leaflet -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
@@ -49,7 +49,7 @@ header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:rgb
 @media(max-width:767px){#map{bottom:var(--nav-h);}}
 
 /* Leaflet dark */
-.leaflet-tile-pane{filter:none;}
+.leaflet-tile-pane{filter:brightness(.55) saturate(.7) hue-rotate(190deg);}
 .leaflet-control-zoom{border:1px solid var(--border)!important;border-radius:8px!important;overflow:hidden;}
 .leaflet-control-zoom a{background:var(--surface)!important;color:var(--text)!important;border-bottom:1px solid var(--border)!important;}
 .leaflet-control-zoom a:hover{background:var(--surface2)!important;}
@@ -276,7 +276,7 @@ header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:rgb
 
 <!-- HEADER -->
 <header>
-  <div class="logo"><div class="logo-icon">🔺</div>LeCuentoScooter<span>Robo Mapa</span></div>
+  <div class="logo"><div class="logo-icon">🔺</div>Zona<span>Alerta</span></div>
   <div class="header-right">
     <div class="fb-dot" id="fb-dot" title="Conexión Firebase"></div>
     <div class="hstat">
@@ -522,11 +522,11 @@ function initMap() {
     bounceAtZoomLimits: true
   });
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap',
-  maxZoom: 19,
-  minZoom: 11
-}).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
+    maxZoom: 19,
+    minZoom: 11
+  }).addTo(map);
 
   map.zoomControl.setPosition('bottomright');
 }
@@ -609,8 +609,9 @@ function submitReport() {
     danger: selectedDanger,
     lat: reportLat,
     lng: reportLng,
-    barrio: getNearbyBarrio(reportLat, reportLng),
     desc,
+    user,
+    ts: Date.now(),
     votes: 1,
     confirms: 1,
     falses: 0
@@ -689,7 +690,7 @@ function addMarkerToMap(report) {
   popupEl.innerHTML = `
     <div class="popup-type" style="color:${color}">${icon} ${report.type}</div>
     <div class="popup-desc">${report.desc}</div>
-    <div class="popup-meta">📍 ${report.barrio || getNearbyBarrio(report.lat, report.lng)} · ${getAge(report.ts)} · ${report.user}</div>
+    <div class="popup-meta">📍 ${report.lat.toFixed(4)}, ${report.lng.toFixed(4)} · ${getAge(report.ts)} · ${report.user}</div>
     <div class="popup-stars">${[1,2,3,4,5].map(i=>`<span class="popup-star${i<=report.danger?' f':''}">★</span>`).join('')}</div>
     <button class="popup-btn" onclick="map.closePopup();showIncident('${report.id}')">Ver detalle y votar</button>`;
   marker.bindPopup(popupEl, { maxWidth: 280 });
@@ -830,7 +831,7 @@ function renderCards(cid) {
       </div>
       <div class="card-desc">${r.desc}</div>
       <div class="card-bottom">
-        <span class="card-location">📍 ${r.barrio || getNearbyBarrio(r.lat, r.lng)}</span>
+        <span class="card-location">📍 ${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}</span>
         <div class="danger-stars">${[1,2,3,4,5].map(i=>`<span class="star${i<=r.danger?' filled':''}">★</span>`).join('')}<span class="card-votes">(${r.votes})</span></div>
       </div>
     </div>`;
@@ -845,19 +846,19 @@ function renderZones(cid) {
   }
   const cells = {};
   reports.forEach(r => {
-    const key = r.barrio || getNearbyBarrio(r.lat, r.lng);
-    if (!cells[key]) cells[key] = { name: key, lat: r.lat, lng: r.lng, reports: [] };
+    const key = `${r.lat.toFixed(3)},${r.lng.toFixed(3)}`;
+    if (!cells[key]) cells[key] = { lat: r.lat, lng: r.lng, reports: [] };
     cells[key].reports.push(r);
   });
   const sorted = Object.values(cells).sort((a,b) => b.reports.length - a.reports.length).slice(0, 8);
-  el.innerHTML = sorted.map((c) => {
+  el.innerHTML = sorted.map((c, i) => {
     const n    = c.reports.length;
     const risk = n <= 1 ? 'low' : n <= 3 ? 'med' : 'high';
     const avg  = (c.reports.reduce((a, b) => a + b.danger, 0) / n).toFixed(1);
     const barCol = risk === 'high' ? '#ff2d55' : risk === 'med' ? '#ff9f0a' : '#30d158';
     return `<div class="zone-card" onclick="flyToZone(${c.lat},${c.lng})">
       <div class="zone-name-row">
-        <span class="zone-name">${c.name}</span>
+        <span class="zone-name">Zona ${i+1} · ${c.lat.toFixed(3)},${c.lng.toFixed(3)}</span>
         <span class="zone-risk risk-${risk}">${n<=1?'Bajo':n<=3?'Moderado':'Alto'}</span>
       </div>
       <div class="zone-stats-row">
@@ -1010,7 +1011,7 @@ function initSheet(){
 let sheetOpen=false;
 function expandSheet(){sheetOpen=true;const s=document.getElementById('bottom-sheet');s.style.transition='transform .32s cubic-bezier(.32,.72,0,1)';s.style.transform='translateY(0)';document.getElementById('sheet-overlay').classList.add('visible');document.getElementById('nav-list').classList.add('active');document.getElementById('nav-map').classList.remove('active');}
 function collapseSheet(){sheetOpen=false;const maxT=window.innerHeight-64-56;const s=document.getElementById('bottom-sheet');s.style.transition='transform .32s cubic-bezier(.32,.72,0,1)';s.style.transform=`translateY(${maxT}px)`;document.getElementById('sheet-overlay').classList.remove('visible');document.getElementById('nav-map').classList.add('active');document.getElementById('nav-list').classList.remove('active');}
-function navSelect(w){if(w==='list'){sheetOpen?collapseSheet():expandSheet();}else{collapseSheet();map.invalidateSize();}}
+function navSelect(w){w==='list'?expandSheet():collapseSheet();}
 
 // ═══════════════════════════════════════════════
 //  MODALS / TOAST / UTILS
