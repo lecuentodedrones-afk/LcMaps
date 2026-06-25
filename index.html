@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>LcMap Beta 8.3</title>
+<title>LcMap Beta 8.4</title>
 
 <!-- Leaflet -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
@@ -522,8 +522,10 @@ function initMap() {
     bounceAtZoomLimits: true
   });
 
-L.tileLayer('https://api.maptiler.com/maps/darkmatter/{z}/{x}/{y}.png?key=CVkw87NIbJsl8Xj7yEep', {
-  attribution: '© MapTiler'
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/">CARTO</a>',
+  subdomains: 'abcd',
+  maxZoom: 19
 }).addTo(map);
 
   map.zoomControl.setPosition('bottomright');
@@ -536,7 +538,6 @@ function startFirestoreListener() {
   setFbDot('connecting');
 
   db.collection(COLLECTION)
-    .orderBy('ts', 'desc')
     .limit(200)
     .onSnapshot(
       snapshot => {
@@ -544,12 +545,11 @@ function startFirestoreListener() {
 
         snapshot.docChanges().forEach(change => {
           const data = change.doc.data();
-          const report = { ...data, id: change.doc.id };
+          const report = { ...data, id: change.doc.id, ts: data.ts || 0 };
 
           if (change.type === 'added') {
-            // Only add if not already in local cache
             if (!reports.find(r => r.id === report.id)) {
-              reports.unshift(report);
+              reports.push(report);
               addMarkerToMap(report);
             }
           }
@@ -558,7 +558,6 @@ function startFirestoreListener() {
             const idx = reports.findIndex(r => r.id === report.id);
             if (idx !== -1) {
               reports[idx] = report;
-              // Refresh popup if open
               removeMarkerFromMap(report.id);
               addMarkerToMap(report);
             }
@@ -570,12 +569,17 @@ function startFirestoreListener() {
           }
         });
 
+        reports.sort((a, b) => (b.ts || 0) - (a.ts || 0));
         renderAll();
       },
       err => {
         setFbDot('error');
-        console.error('Firestore error:', err);
-        showToast('⚠️ Error de conexión con la base de datos');
+        console.error('Firestore error:', err.code, err.message);
+        if (err.code === 'permission-denied') {
+          showToast('⚠️ Acceso denegado: revisa las reglas de Firestore');
+        } else {
+          showToast('⚠️ Error de conexión con la base de datos');
+        }
       }
     );
 }
